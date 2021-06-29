@@ -17,7 +17,7 @@ class Commands(commands.Cog):
 
     @commands.command()
     @commands.guild_only()
-    async def set_prefix(self, ctx, *, prefix=None):
+    async def prefix(self, ctx, *, prefix=None):
         if not ctx.message.author.bot:
             if ctx.message.author.guild_permissions.administrator:
                 if prefix:
@@ -37,36 +37,34 @@ class Commands(commands.Cog):
 
     @commands.command()
     @commands.guild_only()
-    async def set_archive(self, ctx, *, args=None):
-        if not ctx.message.author.bot:
-            if ctx.message.author.guild_permissions.administrator:
-                if args:
-                    archive_category = discord.utils.get(ctx.guild.categories, name=args)
+    async def set(self, ctx, *, args=None):
+        if ctx.message.author.bot:
+            return
+        if not ctx.message.author.guild_permissions.administrator:
+            await ctx.channel.send("Only admins can set the archive category.")
+            return
+        if not args:
+            await ctx.channel.send("A category name was not given, please run the command again and provide a category name.")
+            return
+        if len(args) > 100:
+            await ctx.send("A category name must be 1 to 100 characters long.")
+            return
+        if Helper.get_guild_archive(guild=ctx.guild).name.lower() == args.lower():
+            await ctx.send(f"**`{args}`** is already the archive category for this server.")
+            return
 
-                    if archive_category is not None:
-                        if Helper.get_guild_archive(guild=ctx.guild) is None:
-                            await Helper.set_guild_archive(guild=ctx.guild, archive=archive_category)
-                            await ctx.channel.send(
-                                f"The archive category has been set to '{archive_category.name}'.\n"
-                                f"If this is not the category you intended, run \'{Helper.get_guild_prefix(ctx.guild)}change_archive command\' and enter the correct category")
+        archive_category = discord.utils.find(lambda c: c.name.lower() == args.lower(), ctx.guild.categories)
+        if not archive_category:
+            await ctx.channel.send(f"**`{args}`** is not a category in this server.")
+            return
 
-                        else:
-                            async with ctx.channel.typing():
-                                await asyncio.sleep(1)
-                                await Helper.move_archive_channels(archive_category)
-                                await Helper.set_guild_archive(ctx.guild, archive_category)
-
-                            await ctx.channel.send(f"Archive category has been set to '{archive_category.name}' and all archived channels have been moved there")
-
-                    else:
-                        await ctx.channel.send(f"The category: '{args}' doesnt seem to exist.\n"
-                                               f"If you would like to me to make one for you, please run the {Helper.get_guild_prefix(ctx.guild)}create_archive command.\n"
-                                               f"If you made a mistake, please run this command again and enter the right category")
-                else:
-                    await ctx.channel.send("You must enter the name of the category that you want me to change this server's archive to.\n"
-                                           f"Eg){Helper.get_guild_prefix(ctx.guild)}set_archive The Archives")
-            else:
-                await ctx.channel.send("You do not have permissions to do that, only admins can setup the archive channel")
+        if Helper.get_guild_archive(guild=ctx.guild) is None:
+            await Helper.set_guild_archive(guild=ctx.guild, archive=archive_category)
+            await ctx.channel.send(f"The archive category has been set to **`{archive_category.name}`**.")
+        else:
+            await Helper.move_archive_channels(archive_category)
+            await Helper.set_guild_archive(ctx.guild, archive_category)
+            await ctx.channel.send(f"Archive category has been set to **`{archive_category.name}`** and all archived channels have been moved there")
 
     '''
     # CREATE_ARCHIVE()
@@ -76,30 +74,32 @@ class Commands(commands.Cog):
 
     @commands.command()
     @commands.guild_only()
-    async def create_archive(self, ctx, *, args=None):
-        if not ctx.message.author.bot:
-            if ctx.message.author.guild_permissions.administrator:
-                if args:
-                    new_archive_category = await ctx.guild.create_category(name=args)
+    async def create(self, ctx, *, args=None):
+        if ctx.message.author.bot:
+            return
 
-                    if Helper.get_guild_archive(guild=ctx.guild) is not None:
+        if not ctx.message.author.guild_permissions.administrator:
+            await ctx.channel.send("You do not have permissions to do that, only admins can create an archive category")
+            return
 
-                        already_archived_category = Helper.get_guild_archive(guild=ctx.guild)
-                        await ctx.channel.send(f"This server already has an archive category: '{already_archived_category.name}'\n"
-                                               f"I have created an archive with the name '{new_archive_category.name}', and moved all archived channels from '{already_archived_category.name}'"
-                                               f" there.")
-                        await Helper.move_archive_channels(new_archive_category)
-                        await Helper.set_guild_archive(ctx.guild, new_archive_category)
+        if args:
+            new_archive_category = await ctx.guild.create_category(name=args)
 
-                    else:
-                        await ctx.channel.send(f"Created an archive! The name is: '{args}'")
-                        await Helper.set_guild_archive(ctx.guild, new_archive_category)
-                else:
-                    await ctx.channel.send("You must enter the name of the archive category that you want me to make.\n"
-                                           f"Eg){Helper.get_guild_prefix(ctx.guild)}create_archive Archives")
+            if Helper.get_guild_archive(guild=ctx.guild) is not None:
+
+                already_archived_category = Helper.get_guild_archive(guild=ctx.guild)
+                await ctx.channel.send(f"This server already has an archive category: '{already_archived_category.name}'\n"
+                                       f"I have created an archive with the name '{new_archive_category.name}', and moved all archived channels from '{already_archived_category.name}'"
+                                       f" there.")
+                await Helper.move_archive_channels(new_archive_category)
+                await Helper.set_guild_archive(ctx.guild, new_archive_category)
 
             else:
-                await ctx.channel.send("You do not have permissions to do that, only admins can create an archive category")
+                await ctx.channel.send(f"Created an archive! The name is: '{args}'")
+                await Helper.set_guild_archive(ctx.guild, new_archive_category)
+        else:
+            await ctx.channel.send("You must enter the name of the archive category that you want me to make.\n"
+                                   f"Eg){Helper.get_guild_prefix(ctx.guild)}create_archive Archives")
 
     '''
     # RENAME_ARCHIVE()
@@ -108,7 +108,7 @@ class Commands(commands.Cog):
 
     @commands.command()
     @commands.guild_only()
-    async def rename_archive(self, ctx, *, args):
+    async def rename(self, ctx, *, args):
         if Helper.get_guild_archive(guild=ctx.guild) is not None:
             if ctx.message.author.guild_permissions.administrator:
                 if args:
@@ -133,7 +133,7 @@ class Commands(commands.Cog):
 
     @commands.command()
     @commands.guild_only()
-    async def delete_archive(self, ctx):
+    async def delete(self, ctx):
 
         # method that takes the authors second message and compares it to a rewritten phrase to ensure that they want to delete the archive
         # returns true if the author's message passes the check, indicating they want to delete the archive
@@ -177,7 +177,7 @@ class Commands(commands.Cog):
 
     @commands.command()
     @commands.guild_only()
-    async def return_archive(self, ctx):
+    async def get(self, ctx):
         if not ctx.message.author.bot:
             if Helper.get_guild_archive(ctx.guild) is not None:
                 await ctx.channel.send(f"This servers archive category is '{Helper.get_guild_archive(ctx.guild).name}'")
@@ -241,19 +241,19 @@ class Commands(commands.Cog):
         except AttributeError:
             prefix = '>>'
 
-        embed.add_field(inline=False, name=f"{prefix}set_archive <category name>",
+        embed.add_field(inline=False, name=f"{prefix}set <category name>",
                         value="Creates a category with the given name where I will archive all channels\nOnly admins can use this")
-        embed.add_field(inline=False, name=f"{prefix}create_archive <archive name>",
+        embed.add_field(inline=False, name=f"{prefix}create <archive name>",
                         value="Creates a category with the given name where I will archive all channels\nOnly admins can use this")
-        embed.add_field(inline=False, name=f"{prefix}rename_archive <new name>",
+        embed.add_field(inline=False, name=f"{prefix}rename <new name>",
                         value="Renames the archive category to the given name\nOnly admins can use this")
-        embed.add_field(inline=False, name=f"{prefix}return_archive",
+        embed.add_field(inline=False, name=f"{prefix}get",
                         value="Gives back the name of the archive category")
         embed.add_field(inline=False, name=f"{prefix}archive",
                         value="Archives the channel in which this command is called\nOnly admins can use this")
-        embed.add_field(inline=False, name=f"{prefix}delete_archive",
+        embed.add_field(inline=False, name=f"{prefix}delete",
                         value="Deletes all archived channels and the archive category\nOnly the server owner can use this\nTHIS IS NOT REVERSIBLE")
-        embed.add_field(inline=False, name=f"{prefix}set_prefix <prefix>",
+        embed.add_field(inline=False, name=f"{prefix}prefix <prefix>",
                         value="Change command prefix to whatever is inputted\nOnly admins can use this")
         embed.add_field(inline=False, name=f"{prefix}help",
                         value="Brings up this embed")
@@ -261,7 +261,7 @@ class Commands(commands.Cog):
                         value="Returns the number of pinned messages in the channel")
 
         await ctx.channel.send(embed=embed)
-        await ctx.channel.send(Helper.get_guild_archive(ctx.guild))
+
 
 def setup(client):
     client.add_cog(Commands(client))
