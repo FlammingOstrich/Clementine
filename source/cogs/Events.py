@@ -81,6 +81,11 @@ class Events(commands.Cog):
             await Helper.set_guild_archive(channel.guild, None)
 
     @commands.Cog.listener()
+    async def on_message(self, message):
+        if self.client.user.mentioned_in(message):
+            await message.channel.send(f'**My command prefix for this channel is: `{Helper.get_guild_prefix(message.guild)}`**')
+
+    @commands.Cog.listener()
     async def on_command_error(self, ctx, error):
         if isinstance(error, commands.CommandNotFound):
             return
