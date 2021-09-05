@@ -193,18 +193,20 @@ class Commands(commands.Cog):
     @commands.command()
     @commands.guild_only()
     async def archive(self, ctx):
-        if not ctx.message.author.bot:
-            if ctx.message.author.guild_permissions.administrator:
-                if Helper.get_guild_archive(ctx.guild):
-                    try:
-                        async with ctx.channel.typing():
-                            await ctx.channel.send('Archiving...')
-                            await Helper.archive_channel(ctx.channel)
-                        await ctx.channel.send("Archived!")
-                    except discord.errors.Forbidden:
-                        await ctx.channel.send("I do not have permissions to archive this channel.")
-                else:
-                    await ctx.channel.send(f"There is no archive category for this server. Use {Helper.get_guild_prefix(ctx.guild)}help to see how to set one up.")
+        if not ctx.message.author.bot and ctx.message.author.guild_permissions.administrator:
+            if ctx.channel.category == Helper.get_guild_archive(ctx.guild):
+                await ctx.send('This channel is already archived.')
+                return
+            if Helper.get_guild_archive(ctx.guild):
+                try:
+                    async with ctx.channel.typing():
+                        await ctx.channel.send('Archiving...')
+                        await Helper.archive_channel(ctx.channel)
+                    await ctx.channel.send("Archived!")
+                except discord.errors.Forbidden:
+                    await ctx.channel.send("I do not have permissions to archive this channel.")
+            else:
+                await ctx.channel.send(f"There is no archive category for this server. Use {Helper.get_guild_prefix(ctx.guild)}help to see how to set one up.")
 
     @commands.command()
     @commands.guild_only()

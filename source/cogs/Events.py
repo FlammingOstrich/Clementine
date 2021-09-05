@@ -46,7 +46,7 @@ class Events(commands.Cog):
 
     @commands.Cog.listener()
     async def on_guild_channel_pins_update(self, channel, last_pin):
-        if Helper.get_guild_archive(channel.guild) and Helper.get_guild_archive(channel.guild).id != Helper.get_guild_archive_id(channel.guild):
+        if Helper.get_guild_archive(channel.guild) and Helper.get_guild_archive(channel.guild) != channel.category:
             pins_list = await channel.pins()
             if len(pins_list) == 50:
                 await channel.send("Archive time!")
