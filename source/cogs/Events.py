@@ -46,7 +46,7 @@ class Events(commands.Cog):
 
     @commands.Cog.listener()
     async def on_guild_channel_pins_update(self, channel, last_pin):
-        if Helper.get_guild_archive(channel.guild) and Helper.get_guild_archive(channel.guild).id != Helper.get_guild_archive_id(channel.guild):
+        if Helper.get_guild_archive(channel.guild) and Helper.get_guild_archive(channel.guild) != channel.category:
             pins_list = await channel.pins()
             if len(pins_list) == 50:
                 await channel.send("Archive time!")
@@ -79,6 +79,12 @@ class Events(commands.Cog):
                 f"FOR ME TO CONTINUE WORKING, I HAVE TO BE SET UP AGAIN!\n"
                 f"USE {Helper.get_guild_prefix(channel.guild)}help TO SEE HOW TO SET ME UP AGAIN!")
             await Helper.set_guild_archive(channel.guild, None)
+
+    @commands.Cog.listener()
+    async def on_message(self, message):
+        bot_id = f'<@!{self.client.user.id}>'
+        if bot_id in message.content:
+            await message.channel.send(f'**My command prefix for this server is: `{Helper.get_guild_prefix(message.guild)}`**')
 
     @commands.Cog.listener()
     async def on_command_error(self, ctx, error):
